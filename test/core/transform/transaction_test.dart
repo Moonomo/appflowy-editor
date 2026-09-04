@@ -739,4 +739,55 @@ void main() async {
       ),
     );
   });
+
+  group('compose map is scoped to its transaction', () {
+    test('a refused text transaction does not leak into the next one',
+        () async {
+      // A transaction built while the editor is read-only is refused by
+      // apply() before it is ever composed. Its pending text delta must be
+      // discarded with it, not re-composed by the next transaction that
+      // touches the same node.
+      final document = Document.blank().addParagraphs(
+        1,
+        initialText: 'hello',
+      );
+      final editorState = EditorState(document: document)..editable = false;
+      final node = editorState.getNodeAtPath([0])!;
+
+      final refused = editorState.transaction..insertText(node, 5, ' world');
+      await editorState.apply(refused);
+      expect(node.delta?.toPlainText(), 'hello');
+
+      editorState.editable = true;
+      final next = editorState.transaction..insertText(node, 0, 'A');
+      expect(next.operations.length, 1);
+      await editorState.apply(next);
+
+      expect(editorState.getNodeAtPath([0])?.delta?.toPlainText(), 'Ahello');
+    });
+
+    test('refused deletes on the same node do not poison later transactions',
+        () async {
+      // Two refused deletes of the whole text queued against one node used to
+      // compose past the end of its delta, tripping the inserts-only
+      // assertion in compose() on every later transaction in the process.
+      final document = Document.blank().addParagraphs(
+        1,
+        initialText: 'hello',
+      );
+      final editorState = EditorState(document: document)..editable = false;
+      final node = editorState.getNodeAtPath([0])!;
+
+      await editorState.apply(editorState.transaction..deleteText(node, 0, 5));
+      await editorState.apply(editorState.transaction..deleteText(node, 0, 5));
+      expect(node.delta?.toPlainText(), 'hello');
+
+      editorState.editable = true;
+      final next = editorState.transaction..insertText(node, 5, '!');
+      expect(() => next.operations, returnsNormally);
+      await editorState.apply(next);
+
+      expect(editorState.getNodeAtPath([0])?.delta?.toPlainText(), 'hello!');
+    });
+  });
 }

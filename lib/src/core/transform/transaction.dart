@@ -16,6 +16,12 @@ class Transaction {
   /// The operations to be applied.
   final List<Operation> _operations = [];
 
+  /// The text deltas waiting to be composed into [_operations], keyed by the
+  /// node they apply to. Owned by this transaction: a transaction that is
+  /// never applied (an `EditorState` refusing it, or an error while
+  /// composing) must not leak its pending deltas into the next one.
+  final Map<Node, List<Delta>> _composeMap = {};
+
   List<Operation> get operations {
     if (markNeedsComposing) {
       // compose the delta operations
@@ -212,11 +218,10 @@ class Transaction {
 }
 
 extension TextTransaction on Transaction {
-  /// We use this map to cache the delta waiting to be composed.
-  ///
-  /// This is for make calling the below function as chained.
-  /// For example, transaction..deleteText(..)..insertText(..);
-  static final Map<Node, List<Delta>> _composeMap = {};
+  /// The delta cache lives on the transaction itself (`Transaction._composeMap`)
+  /// so chained calls compose together — transaction..deleteText(..)..insertText(..) —
+  /// while a transaction that is dropped or refused takes its pending deltas
+  /// with it instead of handing them to whichever transaction composes next.
 
   /// Inserts the [text] at the given [index].
   ///
@@ -448,23 +453,28 @@ extension TextTransaction on Transaction {
 
       return;
     }
-    for (final entry in _composeMap.entries) {
-      final node = entry.key;
-      if (node.delta == null) {
-        continue;
+    try {
+      for (final entry in _composeMap.entries) {
+        final node = entry.key;
+        if (node.delta == null) {
+          continue;
+        }
+        final deltaQueue = entry.value;
+        final composed = deltaQueue.fold<Delta>(
+          node.delta!,
+          (p, e) => p.compose(e),
+        );
+        assert(composed.every((element) => element is TextInsert));
+        updateNode(node, {
+          blockComponentDelta: composed.toJson(),
+        });
       }
-      final deltaQueue = entry.value;
-      final composed = deltaQueue.fold<Delta>(
-        node.delta!,
-        (p, e) => p.compose(e),
-      );
-      assert(composed.every((element) => element is TextInsert));
-      updateNode(node, {
-        blockComponentDelta: composed.toJson(),
-      });
+    } finally {
+      // Cleared whether or not the loop finished: a delta that failed to
+      // compose is discarded with its transaction, never retried by the next.
+      markNeedsComposing = false;
+      _composeMap.clear();
     }
-    markNeedsComposing = false;
-    _composeMap.clear();
   }
 
   void addDeltaToComposeMap(Node node, Delta delta) {
