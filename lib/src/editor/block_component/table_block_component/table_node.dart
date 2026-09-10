@@ -9,9 +9,19 @@ class TableNode {
   final Node node;
   final List<List<Node>> _cells = [];
 
+  /// The height added to a row on top of its tallest cell, to account for the
+  /// padding the cell's own block component carries.
+  ///
+  /// Defaults to [TableDefaults.rowHeightExtra]; the table block component
+  /// builder passes the active [TableStyle]'s value. A host whose cell block
+  /// already carries the vertical rhythm it wants passes `0`.
+  final double rowHeightExtra;
+
   TableNode({
     required this.node,
-  }) : _config = TableConfig.fromJson(node.attributes) {
+    double? rowHeightExtra,
+  })  : rowHeightExtra = rowHeightExtra ?? TableDefaults.rowHeightExtra,
+        _config = TableConfig.fromJson(node.attributes) {
     if (node.type != TableBlockKeys.type) {
       AppFlowyEditorLog.editor.debug('TableNode: node is not a table');
 
@@ -192,9 +202,11 @@ class TableNode {
     EditorState? editorState,
     Transaction? transaction,
   }) {
-    // The extra 8 is because of paragraph padding
+    // The extra height is because of the cell block component's own padding.
     double maxHeight = _cells
-        .map<double>((c) => c[row].children.first.rect.height + 8)
+        .map<double>(
+          (c) => c[row].children.first.rect.height + rowHeightExtra,
+        )
         .reduce(max);
 
     if (_cells[0][row].attributes[TableCellBlockKeys.height] != maxHeight &&

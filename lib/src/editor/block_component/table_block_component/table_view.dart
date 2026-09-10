@@ -24,6 +24,8 @@ class TableView extends StatefulWidget {
 class _TableViewState extends State<TableView> {
   @override
   Widget build(BuildContext context) {
+    final showAddButtons = widget.tableStyle.showAddButtons;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -32,36 +34,38 @@ class _TableViewState extends State<TableView> {
             Row(
               children: [
                 ..._buildColumns(context),
-                TableActionButton(
-                  padding: const EdgeInsets.only(left: 0),
-                  icon: widget.tableStyle.addIcon,
-                  width: 28,
-                  height: widget.tableNode.colsHeight,
-                  onPressed: () {
-                    TableActions.add(
-                      widget.tableNode.node,
-                      widget.tableNode.colsLen,
-                      widget.editorState,
-                      TableDirection.col,
-                    );
-                  },
-                ),
+                if (showAddButtons)
+                  TableActionButton(
+                    padding: const EdgeInsets.only(left: 0),
+                    icon: widget.tableStyle.addIcon,
+                    width: 28,
+                    height: widget.tableNode.colsHeight,
+                    onPressed: () {
+                      TableActions.add(
+                        widget.tableNode.node,
+                        widget.tableNode.colsLen,
+                        widget.editorState,
+                        TableDirection.col,
+                      );
+                    },
+                  ),
               ],
             ),
-            TableActionButton(
-              padding: const EdgeInsets.only(top: 1, right: 30),
-              icon: widget.tableStyle.addIcon,
-              height: 28,
-              width: widget.tableNode.tableWidth,
-              onPressed: () {
-                TableActions.add(
-                  widget.tableNode.node,
-                  widget.tableNode.rowsLen,
-                  widget.editorState,
-                  TableDirection.row,
-                );
-              },
-            ),
+            if (showAddButtons)
+              TableActionButton(
+                padding: const EdgeInsets.only(top: 1, right: 30),
+                icon: widget.tableStyle.addIcon,
+                height: 28,
+                width: widget.tableNode.tableWidth,
+                onPressed: () {
+                  TableActions.add(
+                    widget.tableNode.node,
+                    widget.tableNode.rowsLen,
+                    widget.editorState,
+                    TableDirection.row,
+                  );
+                },
+              ),
           ],
         ),
       ],

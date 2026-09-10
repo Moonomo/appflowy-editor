@@ -57,6 +57,7 @@ class TestableEditor {
     TargetPlatform? platform,
     String? defaultTextDirection,
     TextDirection textDirection = TextDirection.ltr,
+    Map<String, BlockComponentBuilder>? blockComponentBuilders,
   }) async {
     await AppFlowyEditorLocalizations.load(locale);
 
@@ -78,6 +79,7 @@ class TestableEditor {
           autoFocus: autoFocus,
           shrinkWrap: shrinkWrap,
           editorScrollController: editorScrollController,
+          blockComponentBuilders: blockComponentBuilders,
           commandShortcutEvents: [
             ...standardCommandShortcutEvents,
             ...TestableFindAndReplaceCommands(context: context)

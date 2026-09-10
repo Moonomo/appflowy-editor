@@ -90,6 +90,7 @@ class _QuoteBlockComponentWidgetState extends State<QuoteBlockComponentWidget>
         DefaultSelectableMixin,
         BlockComponentConfigurable,
         BlockComponentBackgroundColorMixin,
+        NestedBlockComponentStatefulWidgetMixin,
         BlockComponentTextDirectionMixin,
         BlockComponentAlignMixin {
   @override
@@ -109,14 +110,50 @@ class _QuoteBlockComponentWidgetState extends State<QuoteBlockComponentWidget>
   @override
   Node get node => widget.node;
 
+  /// The quote bar spans the children too, so the nested children are rendered
+  /// inside the component itself rather than beside it.
   @override
-  late final editorState = Provider.of<EditorState>(context, listen: false);
+  Widget buildComponentWithChildren(BuildContext context) =>
+      buildComponent(context);
 
   @override
-  Widget build(BuildContext context) {
+  Widget buildComponent(
+    BuildContext context, {
+    bool withBackgroundColor = true,
+  }) {
     final textDirection = calculateTextDirection(
       layoutDirection: Directionality.maybeOf(context),
     );
+
+    Widget content = AppFlowyRichText(
+      key: forwardKey,
+      delegate: this,
+      node: widget.node,
+      editorState: editorState,
+      textAlign: alignment?.toTextAlign ?? textAlign,
+      placeholderText: placeholderText,
+      textSpanDecorator: (textSpan) => textSpan.updateTextStyle(
+        textStyleWithTextSpan(textSpan: textSpan),
+      ),
+      placeholderTextSpanDecorator: (textSpan) => textSpan.updateTextStyle(
+        placeholderTextStyleWithTextSpan(textSpan: textSpan),
+      ),
+      textDirection: textDirection,
+      cursorColor: editorState.editorStyle.cursorColor,
+      selectionColor: editorState.editorStyle.selectionColor,
+      cursorWidth: editorState.editorStyle.cursorWidth,
+    );
+
+    if (node.children.isNotEmpty) {
+      content = Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          content,
+          ...editorState.renderer.buildList(context, node.children),
+        ],
+      );
+    }
 
     Widget child = Container(
       width: double.infinity,
@@ -131,34 +168,14 @@ class _QuoteBlockComponentWidgetState extends State<QuoteBlockComponentWidget>
             widget.iconBuilder != null
                 ? widget.iconBuilder!(context, node)
                 : const _QuoteIcon(),
-            Flexible(
-              child: AppFlowyRichText(
-                key: forwardKey,
-                delegate: this,
-                node: widget.node,
-                editorState: editorState,
-                textAlign: alignment?.toTextAlign ?? textAlign,
-                placeholderText: placeholderText,
-                textSpanDecorator: (textSpan) => textSpan.updateTextStyle(
-                  textStyleWithTextSpan(textSpan: textSpan),
-                ),
-                placeholderTextSpanDecorator: (textSpan) =>
-                    textSpan.updateTextStyle(
-                  placeholderTextStyleWithTextSpan(textSpan: textSpan),
-                ),
-                textDirection: textDirection,
-                cursorColor: editorState.editorStyle.cursorColor,
-                selectionColor: editorState.editorStyle.selectionColor,
-                cursorWidth: editorState.editorStyle.cursorWidth,
-              ),
-            ),
+            Flexible(child: content),
           ],
         ),
       ),
     );
 
     child = Container(
-      decoration: decoration,
+      decoration: withBackgroundColor ? decoration : null,
       key: blockComponentKey,
       padding: padding,
       child: child,

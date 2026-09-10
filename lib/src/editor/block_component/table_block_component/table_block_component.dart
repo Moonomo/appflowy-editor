@@ -34,6 +34,26 @@ class TableStyle {
   final Color borderColor;
   final Color borderHoverColor;
 
+  /// The padding applied around the table inside its horizontal scroll view.
+  ///
+  /// Defaults to [TableDefaults.contentPadding].
+  final EdgeInsets contentPadding;
+
+  /// Whether the hover-only "add row" / "add column" affordances are rendered.
+  ///
+  /// They reserve layout space even while hidden, so a host that cannot hover
+  /// (a touch platform, or a read-only view) can set this to `false` to drop
+  /// the trailing and leading chrome entirely.
+  ///
+  /// Defaults to [TableDefaults.showAddButtons].
+  final bool showAddButtons;
+
+  /// The extra height added to a row on top of its tallest cell, to account
+  /// for the padding the cell's own block component carries.
+  ///
+  /// Defaults to [TableDefaults.rowHeightExtra].
+  final double rowHeightExtra;
+
   const TableStyle({
     this.colWidth = 160,
     this.rowHeight = 40,
@@ -43,6 +63,9 @@ class TableStyle {
     this.handlerIcon = TableDefaults.handlerIcon,
     this.borderColor = TableDefaults.borderColor,
     this.borderHoverColor = TableDefaults.borderHoverColor,
+    this.contentPadding = TableDefaults.contentPadding,
+    this.showAddButtons = TableDefaults.showAddButtons,
+    this.rowHeightExtra = TableDefaults.rowHeightExtra,
   });
 }
 
@@ -64,6 +87,16 @@ class TableDefaults {
   static const Color borderColor = Colors.grey;
 
   static const Color borderHoverColor = Colors.blue;
+
+  static const EdgeInsets contentPadding = EdgeInsets.only(
+    top: 10,
+    left: 10,
+    bottom: 4,
+  );
+
+  static const bool showAddButtons = true;
+
+  static const double rowHeightExtra = 8.0;
 }
 
 enum TableDirection { row, col }
@@ -97,7 +130,10 @@ class TableBlockComponentBuilder extends BlockComponentBuilder {
 
     return TableBlockComponentWidget(
       key: node.key,
-      tableNode: TableNode(node: node),
+      tableNode: TableNode(
+        node: node,
+        rowHeightExtra: tableStyle.rowHeightExtra,
+      ),
       node: node,
       configuration: configuration,
       menuBuilder: menuBuilder,
@@ -230,7 +266,7 @@ class _TableBlockComponentWidgetState extends State<TableBlockComponentWidget>
     Widget child = Scrollbar(
       controller: _scrollController,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.only(top: 10, left: 10, bottom: 4),
+        padding: widget.tableStyle.contentPadding,
         controller: _scrollController,
         scrollDirection: Axis.horizontal,
         child: TableView(
