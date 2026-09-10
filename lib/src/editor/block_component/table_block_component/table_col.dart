@@ -83,7 +83,10 @@ class _TableColState extends State<TableCol> {
       ),
     ]);
 
-    return Row(children: children);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
   }
 
   List<Widget> _buildCells(BuildContext context) {

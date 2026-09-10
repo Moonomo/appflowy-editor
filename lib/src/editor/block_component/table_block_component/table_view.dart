@@ -32,6 +32,9 @@ class _TableViewState extends State<TableView> {
         Column(
           children: [
             Row(
+              // The columns are rows of a table: they line up from the top,
+              // never centred against the tallest column.
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ..._buildColumns(context),
                 if (showAddButtons)

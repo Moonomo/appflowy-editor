@@ -209,6 +209,12 @@ class TableNode {
         )
         .reduce(max);
 
+    // A read-only editor drops the transaction before it reaches the document,
+    // so the stored heights would never catch up with the laid-out cells and
+    // the columns would render out of step. Write them onto the nodes as well,
+    // the way the table node's own height already is.
+    final bool readOnly = editorState != null && editorState.editable != true;
+
     if (_cells[0][row].attributes[TableCellBlockKeys.height] != maxHeight &&
         !maxHeight.isNaN) {
       for (int i = 0; i < colsLen; i++) {
@@ -222,6 +228,11 @@ class TableNode {
             _cells[i][row],
             {TableCellBlockKeys.height: maxHeight},
           );
+          if (readOnly) {
+            _cells[i][row].updateAttributes(
+              {TableCellBlockKeys.height: maxHeight},
+            );
+          }
         } else {
           _cells[i][row].updateAttributes(
             {TableCellBlockKeys.height: maxHeight},
@@ -234,7 +245,7 @@ class TableNode {
         !colsHeight.isNaN) {
       if (transaction != null) {
         transaction.updateNode(node, {TableBlockKeys.colsHeight: colsHeight});
-        if (editorState != null && editorState.editable != true) {
+        if (readOnly) {
           node.updateAttributes({TableBlockKeys.colsHeight: colsHeight});
         }
       } else {
